@@ -1,4 +1,8 @@
 {
-  "name": "application-name",
-  "version": "0.0.1"
+    "name": "application-name",
+    "version": "0.0.1",
+    "private": true,
+    "dependencies": {
+        "restify": "2.8.5"
+    }
 }
