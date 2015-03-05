@@ -13,3 +13,7 @@ exports.add = function(req, res, next) {
 exports.delete = function(req, res, next) {
 
 };
+
+exports.detail = function(req, res, next) {
+
+}
