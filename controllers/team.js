@@ -4,8 +4,12 @@
 
 exports.play= require('./team.play');
 
-exports.list = function(req, res, next) {
-
+exports.showlist = function(req, res, next) {
+    console.log(2333);
+    res.json({
+        code: 0,
+        message: 'success'
+    });
 };
 
 exports.create = function(req, res, next) {

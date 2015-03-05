@@ -3,7 +3,10 @@
  */
 
 exports.list = function(req, res, next) {
-
+    res.json({
+        code: 0,
+        message: 'success'
+    });
 };
 
 exports.add = function(req, res, next) {
