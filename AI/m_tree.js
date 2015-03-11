@@ -20,24 +20,22 @@ var Speed = function(x,y){
 };
 
 /** Para object */
-var Para = function(p_coors, p_speeds, o_coors, i_speed, i_coor){
+var Para = function(p_coors, p_speeds, o_coors, i_speed, i_coor, p_range){
+    // p_coors and o_coors are array of coor that indicate the object IN SIGHT OF the AI
+
     /** fields that you need to input for AI next movement */
     this.p_coors = p_coors;
     this.p_speeds = p_speeds;
     this.o_coors = o_coors;
     this.i_speed = i_speed;
     this.i_coor = i_coor;
+    this.p_range = p_range;
 
     /** fields that AI trees will assign to*/
     this.i_next_coor = this.i_coor;
     // index indicates the stuff been destroyed by AI in the array o_coors, -1 indicates none is destroyed
     this.stuff_index = -1;
 };
-
-
-function aaa(para){
-    console.log(para.name);
-}
 
 var btree = new bt({
     title:'AI behavior',
