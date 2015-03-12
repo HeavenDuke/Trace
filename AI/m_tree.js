@@ -33,8 +33,10 @@ var Para = function(p_coors, p_speeds, o_coors, i_speed, i_coor, p_range, i_rang
 
     /** fields that AI trees will assign to*/
     this.i_next_coor = this.i_coor;
-    // index indicates the stuff been destroyed by AI in the array o_coors, [undefined,undefined] indicates none is destroyed
+    // stuff indicates the stuff been destroyed by AI: [[x,y],dist], [undefined,undefined] indicates none is destroyed
     this.stuff = [undefined,undefined];
+    // player indicates the player that is nearest to AI within the range of tesla gun centered at AI: [[x,y],dist], [undefined,undefined] indicates none is destroyed
+    this.player = [undefined,undefined];
 };
 
 /** Euclidean distance*/
@@ -54,14 +56,27 @@ function get_near_aval(para){
 
     var cand=[undefined, undefined];
     for(var j=0;j<para.o_coors.length;j++){
-        var nearest = tree.nearest({ x: para.o_coors[i][0], y: para.o_coors[i][1] },1,para.p_range);
+        var nearest = tree.nearest({ x: para.o_coors[j][0], y: para.o_coors[j][1] },1,para.p_range);
         if( nearest[0] !== undefined && (cand[0] === undefined || cand[1] > nearest[0][1])){
-            cand[0] = j;
+            cand[0] = [para.o_coors[j][0],para.o_coors[j][1]];
             cand[1] = distance({x:para.i_coor[0],y:para.i_coor[1]},{x:para.o_coors[j][0],y:para.o_coors[j][1]});
         }
     }
 
     return cand;
+}
+
+/** find the nearest palyer to AI within the range of tesla gun centered at AI coordinates, return [] means none*/
+function get_near_p(para){
+    var points = new Array(para.p_coors.length);
+
+    for(var i=0;i<para.p_coors.length;i++){
+        points[i] = {x:para.p_coors[i][0],y:para.p_coors[i][1]};
+    }
+    var tree = new kdtree.kdTree(points, distance, ["x", "y"]);
+
+    var nearest = tree.nearest({ x: para.i_coor[0], y: para.i_coor[1]},1,para.p_range);
+    return nearest[0];
 }
 
 var btree = new bt({
@@ -139,20 +154,22 @@ var btree = new bt({
                         nodes:[
                             new bt.Task({
                                 title: 'con:is_in_range',
-                                run: function(){
-                                    //TODO
-                                    if(0){
-                                        console.log('con:is_in_range');
-                                        this.success();
-                                    }else{
+                                run: function(para){
+                                    var cand = get_near_p(para);
+                                    if(cand[0] === undefined){
                                         console.log('con:is_in_range_fail');
                                         this.fail();
+                                    }else{
+                                        para.player = cand;
+                                        console.log('con:is_in_range');
+                                        this.success();
                                     }
                                 }
                             }), new bt.Task({
                                 title: 'out_of_range',
-                                run: function(){
-                                    //TODO
+                                run: function(para){
+                                    para.i_next_coor[0] = para.i_coor[0] - para.i_speed * (para.player[0][0] - para.i_coor[0]) / para.player[1];
+                                    para.i_next_coor[1] = para.i_coor[1] - para.i_speed * (para.player[0][1] - para.i_coor[1]) / para.player[1];
                                     console.log('out_of_range');
                                     this.success();
                                 }
@@ -160,9 +177,41 @@ var btree = new bt({
                         ]
                     }),new bt.Task({
                         title: 'away_from_team',
-                        run: function(){
-                            //TODO
+                        run: function(para){
                             console.log('away_from_team');
+                            if(para.p_coors.length == 0){
+                                /** if no player and no object insight then do a random walk*/
+                                sign = Math.random()-0.5;
+                                sign = sign?sign<0?-1:1:0;
+                                delta_x = sign * Math.random()*para.i_speed;
+
+                                sign = Math.random()-0.5;
+                                sign = sign?sign<0?-1:1:0;
+                                delta_y = sign * Math.sqrt(Math.pow(para.i_speed,2) - Math.pow(delta_x,2));
+
+                                para.i_next_coor[0] = para.i_coor[0] + delta_x;
+                                para.i_next_coor[1] = para.i_coor[1] + delta_y;
+                            }else{
+                                var x_mean = 0;
+                                var y_mean = 0;
+                                for(var i=0;i<para.p_coors.length;i++){
+                                    x_mean += para.p_coors[i][0];
+                                    y_mean += para.p_coors[i][1];
+                                }
+                                x_mean /= para.p_coors.length;
+                                y_mean /= para.p_coors.length;
+                                /** if the geometry center of player is similar to AI coor, it chooses to take one side*/
+                                if(Math.abs(para.i_next_coor[0] - x_mean) < 1e-3 && Math.abs(para.i_next_coor[1] - y_mean) < 1e-3){
+                                    x_mean = para.p_coors[0][0];
+                                    y_mean = para.p_coors[0][1];
+                                }
+
+                                var dist = distance({x:x_mean,y:y_mean},{x:para.i_coor[0],y:para.i_coor[1]});
+
+                                para.i_next_coor[0] = para.i_coor[0] - para.i_speed * (x_mean - para.i_coor[0]) / dist;
+                                para.i_next_coor[1] = para.i_coor[1] - para.i_speed * (y_mean - para.i_coor[1]) / dist;
+                            }
+
                             this.success();
                         }
                     })
